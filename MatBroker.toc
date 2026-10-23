@@ -1,0 +1,23 @@
+## Interface: 16001
+## Title: MatBroker
+## Notes: Enchanting mat prices and DE values, which alt your herbs, skins, cloth and ore go to, and 1-300 leveling guides for six professions.
+## Author: Eric Olsen
+## Version: 1.0.0
+## SavedVariables: MatBrokerDB
+## OptionalDeps: Auctionator
+## IconTexture: Interface\Icons\INV_Enchant_DustStrange
+## Category: Professions
+## X-Curse-Project-ID: 
+## X-Website: https://github.com/eolsen33/MatBroker
+
+Data.lua
+Guides.lua
+Core.lua
+Prices.lua
+Calc.lua
+Scan.lua
+Alts.lua
+GuidePanel.lua
+Tooltip.lua
+UI.lua
+Minimap.lua

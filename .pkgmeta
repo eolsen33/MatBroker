@@ -1,0 +1,7 @@
+package-as: MatBroker
+
+ignore:
+  - README.md
+  - .github
+  - .pkgmeta
+  - .gitignore
