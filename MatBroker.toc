@@ -2,7 +2,7 @@
 ## Title: MatBroker
 ## Notes: Enchanting mat prices and DE values, which alt your herbs, skins, cloth and ore go to, and 1-300 leveling guides for six professions.
 ## Author: Eric Olsen
-## Version: 1.0.0
+## Version: 1.0.1
 ## SavedVariables: MatBrokerDB
 ## OptionalDeps: Auctionator
 ## IconTexture: Interface\Icons\INV_Enchant_DustStrange
