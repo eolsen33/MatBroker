@@ -207,6 +207,7 @@ local HELP = {
 	"/mb probe  - show where this client exposes the full name",
 	"/mb ids  - check the guide item IDs against the game",
 	"/mb mailui  - list the send-mail edit boxes (if Fill mail won't set the name)",
+	"/mb bags  - which containers count as bags and bank, and the mats found in each",
 	"/mb guide  - show or hide the leveling guide (Alchemy, Leatherworking, Tailoring, Enchanting, Blacksmithing, Mining)",
 	"/mb guide auto  - turn the guide popping up on login on or off",
 	"/mb minimap  - hide or show the minimap button",
@@ -265,6 +266,8 @@ SlashCmdList.MATBROKER = function(msg)
 		ns.ListChars()
 	elseif cmd == "mailui" then
 		ns.DumpMailUI()
+	elseif cmd == "bags" then
+		ns.DumpBags()
 	elseif cmd == "seller" then
 		ns.SetSeller(rest)
 	elseif cmd == "name" then

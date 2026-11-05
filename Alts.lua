@@ -27,17 +27,57 @@ local function slotItem(bag, slot)
 	return id, count, locked
 end
 
+-- Forever has the retail reagent bag (a 6th slot, container 5). The classic
+-- globals still say NUM_BAG_SLOTS = 4, so ask the client whether it has one;
+-- on a client without it, container 5 is the first bank bag and must stay out.
+local BagIndex = (Enum and Enum.BagIndex) or {}
+local REAGENT_BAG = BagIndex.ReagentBag or 5
+
+local function hasReagentBag()
+	if NUM_REAGENTBAG_SLOTS ~= nil then return NUM_REAGENTBAG_SLOTS > 0 end
+	return BagIndex.ReagentBag ~= nil
+end
+
 local function bagIDs()
 	local t = {}
 	for b = 0, NUM_BAG_SLOTS or 4 do t[#t + 1] = b end
+	if hasReagentBag() then t[#t + 1] = REAGENT_BAG end
 	return t
 end
 
 local function bankIDs()
-	local first = (NUM_BAG_SLOTS or 4) + 1
 	local t = { BANK_CONTAINER or -1 }
-	for b = first, first + (NUM_BANKBAGSLOTS or 6) - 1 do t[#t + 1] = b end
+	local first, count
+	if BagIndex.CharacterBankTab_1 then
+		first, count = BagIndex.CharacterBankTab_1, 6
+	elseif BagIndex.BankBag_1 then
+		first, count = BagIndex.BankBag_1, NUM_BANKBAGSLOTS or 7
+	else
+		first = (NUM_BAG_SLOTS or 4) + (hasReagentBag() and 1 or 0) + 1
+		count = NUM_BANKBAGSLOTS or 6
+	end
+	for b = first, first + count - 1 do t[#t + 1] = b end
 	return t
+end
+
+-- /mb bags: which containers this client counts as bags and bank, and what
+-- MatBroker finds in each (to check the reagent bag is being read).
+function ns.DumpBags()
+	ns.Print("NUM_BAG_SLOTS", tostring(NUM_BAG_SLOTS), "NUM_REAGENTBAG_SLOTS", tostring(NUM_REAGENTBAG_SLOTS),
+		"NUM_BANKBAGSLOTS", tostring(NUM_BANKBAGSLOTS), "Enum.BagIndex.ReagentBag", tostring(BagIndex.ReagentBag),
+		"BankBag_1", tostring(BagIndex.BankBag_1), "CharacterBankTab_1", tostring(BagIndex.CharacterBankTab_1))
+	local function dump(label, bags)
+		for _, bag in ipairs(bags) do
+			local slots, tracked, kinds = GetNumSlots(bag) or 0, 0, 0
+			for slot = 1, slots do
+				local id, count = slotItem(bag, slot)
+				if id and ns.TRACKED[id] then tracked, kinds = tracked + count, kinds + 1 end
+			end
+			ns.Print(label, bag, "slots", slots, "tracked mats", tracked, "(" .. kinds .. " kinds)")
+		end
+	end
+	dump("bag", bagIDs())
+	dump("bank", bankIDs())
 end
 
 local function countItems(bags)
