@@ -27,6 +27,22 @@ local function addRouteLines(tooltip, id)
 	end
 end
 
+-- Whites no guide tracks: sellable ones go to the AH seller with the surplus.
+local function addWhiteLines(tooltip, id, link)
+	if not ns.db.mailWhites then return end
+	local status = ns.WhiteStatus(id, link)
+	if not status then return end
+	local to = ns.SurplusAlt()
+	local _, myName = ns.Me()
+	if status == "keep" then
+		tooltip:AddDoubleLine(PURPLE .. "MatBroker|r " .. GREEN .. "Keep|r", GREY .. "kept on this character (/mb keep)|r")
+	elseif to and to ~= myName then
+		tooltip:AddDoubleLine(PURPLE .. "MatBroker|r " .. YELLOW .. "Sellable|r", YELLOW .. "send to " .. ns.MailName(to) .. "|r")
+	else
+		tooltip:AddDoubleLine(PURPLE .. "MatBroker|r " .. YELLOW .. "Sellable|r", YELLOW .. "sell on the AH|r")
+	end
+end
+
 local function addMatLines(tooltip, id)
 	local price, source, t = ns.Price(id)
 	tooltip:AddDoubleLine(PURPLE .. "MatBroker|r", price and (ns.Money(price) .. GREY .. " (" .. source .. (t and (", " .. ns.Age(t)) or "") .. ")|r") or (GREY .. "no price yet|r"))
@@ -69,7 +85,7 @@ local function onItem(tooltip, data)
 	if not link then return end
 
 	local id = tonumber(tostring(link):match("item:(%d+)")) or tonumber(link)
-	if id and ns.TRACKED[id] then addRouteLines(tooltip, id) end
+	if id and ns.TRACKED[id] then addRouteLines(tooltip, id) else addWhiteLines(tooltip, id, link) end
 	if id and ns.IS_MAT[id] then
 		addMatLines(tooltip, id)
 	else

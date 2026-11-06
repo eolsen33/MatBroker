@@ -142,6 +142,120 @@ function ns.Greens()
 	return out
 end
 
+-- White reagents for the AH -----------------------------------------------
+
+-- Common (white) trade goods and gems that no guide tracks: eggs, feathers,
+-- spider silk, Malachite, Tigerseye, meat, fish and the like. They sell, so
+-- they go to the AH seller with the surplus. Mats a guide tracks keep their
+-- own routing; "/mb keep" holds one back on this character, "/mb sell"
+-- adds anything else (any quality or class).
+local TRADE_GOODS, GEM = 7, 3
+
+-- Vendor-bought whites you carry for your own use. Nobody buys these on the
+-- AH, so they stay unless you "/mb sell" one.
+local VENDOR_WHITES = {}
+for _, id in ipairs({
+	4470, 4471,                      -- Simple Wood, Flint and Tinder
+	2678, 2692, 3713, 3714,          -- Mild, Hot, Soothing, Holiday Spices
+	6529, 6530, 6532, 6533, 6811, 7307,  -- fishing lures: Shiny Bauble, Nightcrawlers, Bright Baubles, Aquadynamic Fish Attractor, Fish Lens, Flesh Eating Worm
+	2324, 2604, 2605, 4340, 4341, 4342, 6260, 10290, 14341,  -- Bleach, dyes, Rune Thread
+	4399, 4400,                      -- Heavy Stock, Wooden Stock
+}) do VENDOR_WHITES[id] = true end
+
+local function keepList(c)
+	c.keep = c.keep or {}
+	return c.keep
+end
+
+local function sellList()
+	local realm = ns.Realm()
+	realm.sell = realm.sell or {}
+	return realm.sell
+end
+
+-- Would this item go to the AH seller as a white? Returns "sell", "keep" or nil.
+function ns.WhiteStatus(id, link, c)
+	if not id or ns.TRACKED[id] then return nil end
+	c = c or ns.Me()
+	if keepList(c)[id] then return "keep" end
+	if sellList()[id] then return "sell" end
+	if VENDOR_WHITES[id] then return nil end
+	local info = ns.ItemInfo(link or id)
+	if not info or info.quality ~= 1 then return nil end
+	if info.classID == TRADE_GOODS or info.classID == GEM then return "sell" end
+	return nil
+end
+
+-- Unbound sellable whites in the bags: { [id] = qty }.
+function ns.Whites()
+	local out = {}
+	local c = ns.Me()
+	for _, bag in ipairs(bagIDs()) do
+		for slot = 1, GetNumSlots(bag) or 0 do
+			local id, _, link, isBound = slotDetail(bag, slot)
+			if id and not isBound and ns.WhiteStatus(id, link, c) == "sell" then
+				local _, count = slotItem(bag, slot)
+				out[id] = (out[id] or 0) + (count or 1)
+			end
+		end
+	end
+	return out
+end
+
+-- An item in the bags by link, ID or (part of a) name.
+local function findBagItem(text)
+	local id = tonumber(text:match("item:(%d+)")) or tonumber(text)
+	if id then return id end
+	text = text:lower()
+	local partial
+	for _, bag in ipairs(bagIDs()) do
+		for slot = 1, GetNumSlots(bag) or 0 do
+			local itemID = slotItem(bag, slot)
+			local name = itemID and ns.MatName(itemID):lower()
+			if name == text then return itemID end
+			if name and name:find(text, 1, true) then partial = partial or itemID end
+		end
+	end
+	return partial
+end
+
+local function toggleListed(list, text, label, onMsg, offMsg)
+	text = text or ""
+	if text == "" then
+		local names = {}
+		for id in pairs(list) do table.insert(names, ns.MatName(id)) end
+		table.sort(names)
+		ns.Print(label .. ":", #names > 0 and table.concat(names, ", ") or "nothing yet")
+		return
+	end
+	local id = findBagItem(text)
+	if not id then ns.Print("no item called", text, "in your bags. Shift-click a link or type part of its name.") return end
+	if ns.TRACKED[id] then
+		ns.Print(ns.MatName(id), "is a guide mat: MatBroker already decides where it goes.")
+		return
+	end
+	if list[id] then
+		list[id] = nil
+		ns.Print(ns.MatName(id) .. ":", offMsg)
+	else
+		list[id] = true
+		ns.Print(ns.MatName(id) .. ":", onMsg)
+	end
+	ns.RefreshMailPanel()
+end
+
+-- /mb keep <item>: this character hangs on to it (Linen for First Aid, say).
+function ns.ToggleKeep(text)
+	toggleListed(keepList(ns.Me()), text, "Kept on this character",
+		"kept on this character, never offered to the AH seller.", "no longer kept; sellable whites go to the AH seller again.")
+end
+
+-- /mb sell <item>: always offer it to the AH seller, whatever it is.
+function ns.ToggleSell(text)
+	toggleListed(sellList(), text, "Always sent to the AH seller",
+		"always sent to the AH seller.", "back to the usual rule (white trade goods and gems only).")
+end
+
 -- Characters -----------------------------------------------------------
 
 -- Forever characters have a first and a last name ("Shadow Tomb"), mail is
@@ -601,6 +715,10 @@ function ns.MailPlan()
 	if greens and #greens == 0 then greens = nil end
 	for id, n in pairs(left) do
 		if n > 0 and (ns.GUIDES_FOR[id] or ns.IS_EXTRA[id]) then surplus[id] = n end
+	end
+	-- Sellable whites no guide tracks ride along with the surplus.
+	if surplusTo and ns.db.mailWhites then
+		for id, n in pairs(ns.Whites()) do surplus[id] = (surplus[id] or 0) + n end
 	end
 	return plan, surplus, surplusTo, greens
 end

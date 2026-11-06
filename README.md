@@ -3,7 +3,7 @@
 A World of Warcraft Forever addon. Tells you where every mat should go, what it's worth, and what to craft next.
 
 - **Routing.** Every herb, skin, cloth, ore and enchanting mat gets a tooltip line naming the alt that needs it, or marking it surplus for the auction house.
-- **Mailbox.** A panel beside the mailbox lists what to send to whom and fills the mail, using Forever's first-and-last names. Unbound greens queue to your chosen AH seller.
+- **Mailbox.** A panel beside the mailbox lists what to send to whom and fills the mail, using Forever's first-and-last names. Unbound greens and sellable white trade goods (eggs, feathers, silk, gems) queue to your chosen AH seller; `/mb keep` holds one back, `/mb sell` adds anything else.
 - **Prices.** Enchanting mat prices from your AH scans, Auctionator or manual values; disenchant value and max buy price on gear tooltips.
 - **Guides.** Leveling guides for Alchemy, Leatherworking, Tailoring, Enchanting, Blacksmithing and Mining, docked beside the profession window.
 

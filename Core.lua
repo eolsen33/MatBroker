@@ -7,6 +7,7 @@ local DEFAULTS = {
 	tooltip = true,
 	guideAuto = true,   -- open the leveling guide on login for crafter alts
 	mailGreens = true,  -- offer unbound green gear to the AH seller at the mailbox
+	mailWhites = true,  -- offer sellable white trade goods to the AH seller too
 }
 
 ns.events = CreateFrame("Frame")
@@ -198,6 +199,9 @@ local HELP = {
 	"/mb source auto|scan|auctionator|manual  - where prices come from (now %s)",
 	"/mb tooltip  - toggle tooltip lines",
 	"/mb greens  - toggle mailing BoE greens to the AH seller",
+	"/mb whites  - toggle mailing sellable white trade goods and gems to the AH seller",
+	"/mb keep <item or link>  - this character keeps that item (/mb keep alone lists them)",
+	"/mb sell <item or link>  - always send that item to the AH seller (/mb sell alone lists them)",
 	"/mb alts  - what each crafter alt still needs, and where your herbs and skins go",
 	"/mb path <choice> <option>  - pick a guide route (/mb path alone lists them)",
 	"/mb chars  - characters MatBroker knows and their professions",
@@ -291,6 +295,14 @@ SlashCmdList.MATBROKER = function(msg)
 		ns.db.mailGreens = not ns.db.mailGreens
 		ns.Print("BoE greens to the AH seller:", ns.db.mailGreens and "on" or "off")
 		ns.RefreshMailPanel()
+	elseif cmd == "whites" then
+		ns.db.mailWhites = not ns.db.mailWhites
+		ns.Print("White trade goods to the AH seller:", ns.db.mailWhites and "on" or "off")
+		ns.RefreshMailPanel()
+	elseif cmd == "keep" then
+		ns.ToggleKeep(rest)
+	elseif cmd == "sell" then
+		ns.ToggleSell(rest)
 	elseif cmd == "tooltip" then
 		ns.db.tooltip = not ns.db.tooltip
 		ns.Print("tooltip lines", ns.db.tooltip and "on" or "off")
