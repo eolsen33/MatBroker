@@ -1,7 +1,8 @@
 local _, ns = ...
 
 -- Leveling guides for the crafter alts, from wow-professions.com's Forever
--- guides (beta data, October 2026). `uses` lists everything a step consumes
+-- guides (beta data, October 2026; re-checked against the pages 2026-11-09 —
+-- they still say "untested on live"). `uses` lists everything a step consumes
 -- in total; only the mats in `mats` are routed between alts, the vendor
 -- items (vials, thread, flux, dye) just show on the guide panel.
 -- Steps with a `choice` only count when that option is picked
@@ -25,15 +26,17 @@ local PEACEBLOOM, SILVERLEAF, MAGEROYAL, EARTHROOT, BRIARTHORN = 2447, 765, 785,
 local STRANGLEKELP, KINGSBLOOD, LIFEROOT, ARTHAS_TEARS = 3820, 3356, 3357, 8836
 local SUNGRASS, BLINDWEED, FIREFIN, PURPLE_LOTUS = 8838, 8839, 6359, 8831
 local FIRE_OIL, ELIXIR_WISDOM = 6371, 3383
+local KHADGARS_WHISKER, GOLDTHORN = 3358, 3821
 
 -- Leather
 local SCRAPS, LIGHT_LEATHER, LIGHT_HIDE, MEDIUM_LEATHER, MEDIUM_HIDE = 2934, 2318, 783, 2319, 4232
-local HEAVY_LEATHER, HEAVY_HIDE, THICK_LEATHER = 4234, 4235, 4304
+local HEAVY_LEATHER, HEAVY_HIDE, THICK_LEATHER, RUGGED_LEATHER = 4234, 4235, 4304, 8170
 local CURED_LIGHT, CURED_MEDIUM, CURED_HEAVY, FINE_BELT = 4231, 4233, 4236, 4246
 
 -- Cloth and bolts
 local LINEN, WOOL, SILK, MAGEWEAVE = 2589, 2592, 4306, 4338
 local BOLT_LINEN, BOLT_WOOL, BOLT_SILK, BOLT_MAGEWEAVE = 2996, 2997, 4305, 4339
+local RUNECLOTH, BOLT_RUNECLOTH = 14047, 14048
 
 -- Enchanting mats
 local STRANGE_DUST, SOUL_DUST, VISION_DUST, DREAM_DUST, ILLUSION_DUST = 10940, 11083, 11137, 11176, 16204
@@ -46,14 +49,17 @@ local MOTE_OF_MAGIC = 247786 -- Forever-only vendor reagent
 -- Ore, bars and stone
 local COPPER_ORE, TIN_ORE, SILVER_ORE, IRON_ORE, GOLD_ORE, MITHRIL_ORE = 2770, 2771, 2775, 2772, 2776, 3858
 local COPPER_BAR, TIN_BAR, BRONZE_BAR, SILVER_BAR, IRON_BAR, GOLD_BAR = 2840, 3576, 2841, 2842, 3575, 3577
-local STEEL_BAR, MITHRIL_BAR = 3859, 3860
-local ROUGH_STONE, COARSE_STONE, HEAVY_STONE, SOLID_STONE = 2835, 2836, 2838, 7912
-local ROUGH_GS, COARSE_GS, HEAVY_GS, SOLID_GS = 3470, 3478, 3486, 7966
+local STEEL_BAR, MITHRIL_BAR, THORIUM_BAR, TRUESILVER_BAR = 3859, 3860, 12359, 6037
+local THORIUM_ORE, TRUESILVER_ORE = 10620, 7911
+local ROUGH_STONE, COARSE_STONE, HEAVY_STONE, SOLID_STONE, DENSE_STONE = 2835, 2836, 2838, 7912, 12365
+local ROUGH_GS, COARSE_GS, HEAVY_GS, SOLID_GS, DENSE_GS = 3470, 3478, 3486, 7966, 12644
+local CITRINE, STAR_RUBY, AQUAMARINE = 3864, 7910, 7909
 
 -- Vendor items
 local EMPTY_VIAL, LEADED_VIAL, CRYSTAL_VIAL = 3371, 3372, 8925
 local SALT, COARSE_THREAD, FINE_THREAD, SILKEN_THREAD, HEAVY_SILKEN_THREAD = 4289, 2320, 2321, 4291, 8343
-local GRAY_DYE, RED_DYE, GREEN_DYE = 4340, 2604, 2605
+local GRAY_DYE, RED_DYE, GREEN_DYE, BLACK_DYE = 4340, 2604, 2605, 2325
+local RUNE_THREAD = 14341
 local MOSS_AGATE, IRON_BUCKLE = 1206, 7071
 local MAPLE_SEED, STRANGLETHORN_SEED = 17034, 17035
 local WEAK_FLUX, STRONG_FLUX, COAL = 2880, 3466, 3857
@@ -73,7 +79,7 @@ ns.GUIDES = {
 		key = "alchemy", name = "Alchemy", skillLine = 171, top = 290,
 		choices = { oil = { "fireoil", "manapot", label = "130-165" } },
 		mats = { PEACEBLOOM, SILVERLEAF, MAGEROYAL, EARTHROOT, BRIARTHORN, STRANGLEKELP, FIREFIN,
-			KINGSBLOOD, LIFEROOT, ARTHAS_TEARS, SUNGRASS, BLINDWEED },
+			KINGSBLOOD, LIFEROOT, KHADGARS_WHISKER, GOLDTHORN, ARTHAS_TEARS, SUNGRASS, BLINDWEED },
 		madeFrom = { [FIRE_OIL] = { FIREFIN, 1 } },
 		ranks = ranks(
 			{ Horde = "Yelmak (Orgrimmar), Doctor Marsh (Undercity), Bena Winterhoof (Thunder Bluff)",
@@ -105,7 +111,8 @@ ns.GUIDES = {
 				note = "Recipe is bind on pickup, buy it on this alt: Bronk or Logannas (Feralas), Glyx Brewright (Stranglethorn), Alchemist Pestlezugg (Tanaris)." },
 			-- 225+ is untested in the guide (beta cap). 290-300 isn't decided yet.
 			{ lo = 225, hi = 230, crafts = 12, recipe = "Nature Protection Potion", uses = { [LIFEROOT] = 12, [STRANGLEKELP] = 12, [LEADED_VIAL] = 12 } },
-			{ lo = 230, hi = 265, crafts = 45, recipe = "Draught of Detect Undead", uses = { [ARTHAS_TEARS] = 45, [CRYSTAL_VIAL] = 45 },
+			{ lo = 230, hi = 240, crafts = 20, recipe = "Greater Mana Potion", uses = { [KHADGARS_WHISKER] = 20, [GOLDTHORN] = 20, [LEADED_VIAL] = 20 } },
+			{ lo = 240, hi = 265, crafts = 35, recipe = "Draught of Detect Undead", uses = { [ARTHAS_TEARS] = 35, [CRYSTAL_VIAL] = 35 },
 				note = "Yellow from 245, so expect a few extra crafts." },
 			{ lo = 265, hi = 275, crafts = 10, recipe = "Superior Mana Potion", uses = { [SUNGRASS] = 20, [BLINDWEED] = 20, [CRYSTAL_VIAL] = 10 },
 				note = "Recipe: Algernon (Undercity) or Ulthir (Darnassus)." },
@@ -114,12 +121,17 @@ ns.GUIDES = {
 		},
 	},
 	{
-		key = "leatherworking", name = "Leatherworking", skillLine = 165, top = 225,
+		key = "leatherworking", name = "Leatherworking", skillLine = 165, top = 300,
 		choices = {
 			start = { "scraps", "kit", label = "1-30" },
+			light = { "leather", "hide", label = "30-115" },
+			medium = { "hide", "leather", label = "80-125" },
 			heavy = { "hide", "nohide", label = "130-175" },
 		},
-		mats = { SCRAPS, LIGHT_LEATHER, LIGHT_HIDE, MEDIUM_LEATHER, MEDIUM_HIDE, HEAVY_LEATHER, HEAVY_HIDE, THICK_LEATHER },
+		-- Runecloth drops for everyone, so it is routed here too (the Tailor
+		-- gets first call: guide order decides).
+		mats = { SCRAPS, LIGHT_LEATHER, LIGHT_HIDE, MEDIUM_LEATHER, MEDIUM_HIDE, HEAVY_LEATHER, HEAVY_HIDE, THICK_LEATHER,
+			RUGGED_LEATHER, RUNECLOTH },
 		madeFrom = {
 			[CURED_LIGHT] = { LIGHT_HIDE, 1 }, [CURED_MEDIUM] = { MEDIUM_HIDE, 1 },
 			[CURED_HEAVY] = { HEAVY_HIDE, 1 }, [FINE_BELT] = { LIGHT_LEATHER, 6 },
@@ -134,17 +146,32 @@ ns.GUIDES = {
 				uses = { [SCRAPS] = 100 }, makes = { [LIGHT_LEATHER] = 33 }, note = "Turns yellow at 20." },
 			{ lo = 1,   hi = 30,  crafts = 27, recipe = "Light Armor Kit", choice = "start", option = "kit",
 				uses = { [LIGHT_LEATHER] = 27 }, note = "1 Light Leather each." },
-			{ lo = 30,  hi = 55,  crafts = 27, recipe = "Cured Light Hide", uses = { [LIGHT_HIDE] = 27, [SALT] = 27 },
+			-- 30-115: the guide's default is all leather now; curing Light Hide is the route "if you bought Light Hides".
+			{ lo = 30,  hi = 45,  crafts = 24, recipe = "Light Armor Kit", choice = "light", option = "leather", uses = { [LIGHT_LEATHER] = 24 } },
+			{ lo = 45,  hi = 55,  crafts = 10, recipe = "Embossed Leather Gloves", choice = "light", option = "leather",
+				uses = { [LIGHT_LEATHER] = 30, [COARSE_THREAD] = 20 } },
+			{ lo = 30,  hi = 55,  crafts = 27, recipe = "Cured Light Hide", choice = "light", option = "hide",
+				uses = { [LIGHT_HIDE] = 27, [SALT] = 27 },
 				makes = { [CURED_LIGHT] = 27 }, note = "Keep 24 for the Light Leather Pants at 100." },
 			{ lo = 55,  hi = 75,  crafts = 21, recipe = "Embossed Leather Gloves", uses = { [LIGHT_LEATHER] = 63, [COARSE_THREAD] = 42 } },
 			{ lo = 75,  hi = 80,  crafts = 8,  recipe = "Medium Leather", uses = { [LIGHT_LEATHER] = 32 }, makes = { [MEDIUM_LEATHER] = 8 } },
-			{ lo = 80,  hi = 90,  crafts = 10, recipe = "Cured Medium Hide", uses = { [MEDIUM_HIDE] = 10, [SALT] = 10 },
+			{ lo = 80,  hi = 90,  crafts = 10, recipe = "Cured Medium Hide", choice = "medium", option = "hide",
+				uses = { [MEDIUM_HIDE] = 10, [SALT] = 10 },
 				makes = { [CURED_MEDIUM] = 10 }, note = "Keep them for the Dark Leather Belts at 115." },
+			{ lo = 80,  hi = 90,  crafts = 11, recipe = "Fine Leather Belt", choice = "medium", option = "leather",
+				uses = { [LIGHT_LEATHER] = 66, [COARSE_THREAD] = 22 }, note = "The no-hide route: the belts sell or disenchant." },
 			{ lo = 90,  hi = 100, crafts = 19, recipe = "Fine Leather Belt", uses = { [LIGHT_LEATHER] = 114, [COARSE_THREAD] = 38 },
 				makes = { [FINE_BELT] = 19 }, note = "Keep 10 belts for the Dark Leather Belts at 115." },
-			{ lo = 100, hi = 115, crafts = 24, recipe = "Light Leather Pants", uses = { [LIGHT_LEATHER] = 240, [CURED_LIGHT] = 24, [FINE_THREAD] = 24 } },
-			{ lo = 115, hi = 125, crafts = 10, recipe = "Dark Leather Belt",
+			{ lo = 100, hi = 115, crafts = 16, recipe = "Dark Leather Cloak", choice = "light", option = "leather",
+				uses = { [MEDIUM_LEATHER] = 128, [FINE_THREAD] = 16, [GRAY_DYE] = 16 } },
+			{ lo = 100, hi = 115, crafts = 24, recipe = "Light Leather Pants", choice = "light", option = "hide",
+				uses = { [LIGHT_LEATHER] = 240, [CURED_LIGHT] = 24, [FINE_THREAD] = 24 } },
+			{ lo = 115, hi = 125, crafts = 10, recipe = "Dark Leather Belt", choice = "medium", option = "hide",
 				uses = { [FINE_BELT] = 10, [CURED_MEDIUM] = 10, [FINE_THREAD] = 20, [GRAY_DYE] = 10 } },
+			{ lo = 115, hi = 120, crafts = 6,  recipe = "Dark Leather Pants", choice = "medium", option = "leather",
+				uses = { [MEDIUM_LEATHER] = 72, [GRAY_DYE] = 6, [FINE_THREAD] = 6 } },
+			{ lo = 120, hi = 125, crafts = 5,  recipe = "Hillman's Leather Gloves", choice = "medium", option = "leather",
+				uses = { [MEDIUM_LEATHER] = 70, [FINE_THREAD] = 20 } },
 			{ lo = 125, hi = 130, crafts = 7,  recipe = "Heavy Leather", uses = { [MEDIUM_LEATHER] = 35 }, makes = { [HEAVY_LEATHER] = 7 } },
 			{ lo = 130, hi = 140, crafts = 20, recipe = "Cured Heavy Hide", choice = "heavy", option = "hide",
 				uses = { [HEAVY_HIDE] = 20, [SALT] = 60 }, makes = { [CURED_HEAVY] = 20 }, note = "You need these later." },
@@ -167,21 +194,33 @@ ns.GUIDES = {
 			{ lo = 195, hi = 210, crafts = 21, recipe = "Nightscape Headband", uses = { [THICK_LEATHER] = 105, [SILKEN_THREAD] = 42 } },
 			{ lo = 210, hi = 225, crafts = 15, recipe = "Nightscape Pants", uses = { [THICK_LEATHER] = 210, [SILKEN_THREAD] = 60 },
 				note = "Only the Artisan trainers teach this one, not the Expert trainers." },
-			-- The guide stops at 225 until Forever's level cap allows more.
+			-- 225-300 (guide, still "untested on live"). Rugged Leather: 1,030 in all; Runecloth: 530.
+			{ lo = 225, hi = 235, crafts = 12, recipe = "Nightscape Boots", uses = { [THICK_LEATHER] = 192, [HEAVY_SILKEN_THREAD] = 24 } },
+			{ lo = 235, hi = 250, crafts = 15, recipe = "Wicked Leather Gauntlets",
+				uses = { [RUGGED_LEATHER] = 120, [BLACK_DYE] = 15, [RUNE_THREAD] = 15 },
+				note = "Pattern: Werg Thickblade or Leonard Porter (Western Plaguelands). Black Dye and Rune Thread: Tailoring/Leatherworking Supply vendor." },
+			{ lo = 250, hi = 265, crafts = 21, recipe = "Wicked Leather Gauntlets",
+				uses = { [RUGGED_LEATHER] = 168, [BLACK_DYE] = 21, [RUNE_THREAD] = 21 }, note = "Yellow now, so expect a few extra." },
+			{ lo = 265, hi = 285, crafts = 20, recipe = "Runic Leather Headband",
+				uses = { [RUGGED_LEATHER] = 280, [RUNECLOTH] = 200, [RUNE_THREAD] = 20 },
+				note = "Pattern: Jase Farlane, Light's Hope Chapel (Eastern Plaguelands)." },
+			{ lo = 285, hi = 300, crafts = 33, recipe = "Runic Leather Headband",
+				uses = { [RUGGED_LEATHER] = 462, [RUNECLOTH] = 330, [RUNE_THREAD] = 33 },
+				note = "Green from 290. Heavy Scorpid Shoulders or Wicked Leather Armor also work if you have Cured Rugged Hide." },
 		},
 	},
 	{
-		key = "tailoring", name = "Tailoring", skillLine = 197, top = 225,
-		choices = {
-			silk = { "bolts", "shoulders", label = "100-120" },
-			mageweave = { "bolts", "shirts", label = "140-150" },
-		},
+		key = "tailoring", name = "Tailoring", skillLine = 197, top = 265,
+		-- The beta's silk/mageweave alternatives (shoulders, Red Swashbuckler's
+		-- Shirt) are gone from the guide, so there are no routes to pick now.
+		choices = {},
 		-- Cloth drops for everyone, so every alt routes it here. The elixirs
-		-- come from the Alchemy alt (or the AH).
-		mats = { LINEN, WOOL, SILK, MAGEWEAVE, ELIXIR_WISDOM },
+		-- come from the Alchemy alt (or the AH); Rugged Leather from the Skinners.
+		mats = { LINEN, WOOL, SILK, MAGEWEAVE, RUNECLOTH, RUGGED_LEATHER, ELIXIR_WISDOM },
 		madeFrom = {
 			[BOLT_LINEN] = { LINEN, 2 }, [BOLT_WOOL] = { WOOL, 3 },
 			[BOLT_SILK] = { SILK, 4 }, [BOLT_MAGEWEAVE] = { MAGEWEAVE, 5 },
+			[BOLT_RUNECLOTH] = { RUNECLOTH, 5 },
 		},
 		ranks = ranks(
 			{ Horde = "Magar (Orgrimmar), Rhiannon Davis (Undercity), Tepa (Thunder Bluff)",
@@ -197,31 +236,31 @@ ns.GUIDES = {
 			{ lo = 80,  hi = 95,  crafts = 22, recipe = "Woolen Cape", uses = { [BOLT_WOOL] = 22, [FINE_THREAD] = 22 },
 				note = "If the bolts already took you past 80, make capes until 95." },
 			{ lo = 95,  hi = 100, crafts = 5,  recipe = "Double-stitched Woolen Shoulders", uses = { [BOLT_WOOL] = 15, [FINE_THREAD] = 10 } },
-			{ lo = 100, hi = 120, crafts = 54, recipe = "Bolt of Silk Cloth", choice = "silk", option = "bolts",
+			{ lo = 100, hi = 120, crafts = 54, recipe = "Bolt of Silk Cloth",
 				uses = { [SILK] = 216 }, makes = { [BOLT_SILK] = 54 },
 				note = "Keep the bolts: 184 (736 Silk) through 190." },
-			{ lo = 100, hi = 120, crafts = 23, recipe = "Double-stitched Woolen Shoulders", choice = "silk", option = "shoulders",
-				uses = { [BOLT_WOOL] = 69, [FINE_THREAD] = 46 },
-				note = "Beta route for an alt that stops at 150. The silk bolts still get made later." },
 			{ lo = 120, hi = 125, crafts = 5,  recipe = "Gloves of Meditation",
 				uses = { [BOLT_WOOL] = 20, [FINE_THREAD] = 15, [ELIXIR_WISDOM] = 5 },
 				note = "Elixir of Wisdom: your Alchemy alt makes 30 at 90-120, or the AH." },
 			{ lo = 125, hi = 140, crafts = 24, recipe = "Gloves of Meditation",
 				uses = { [BOLT_WOOL] = 96, [FINE_THREAD] = 72, [ELIXIR_WISDOM] = 24 },
 				note = "Expert first. Yellow the whole way, so expect a few extra crafts." },
-			{ lo = 140, hi = 150, crafts = 23, recipe = "Bolt of Mageweave", choice = "mageweave", option = "bolts",
+			{ lo = 140, hi = 150, crafts = 23, recipe = "Bolt of Mageweave",
 				uses = { [MAGEWEAVE] = 115 }, makes = { [BOLT_MAGEWEAVE] = 23 },
-				note = "Keep the bolts: 180 (900 Mageweave) through 225." },
-			{ lo = 140, hi = 150, crafts = 10, recipe = "Red Swashbuckler's Shirt", choice = "mageweave", option = "shirts",
-				uses = { [BOLT_SILK] = 30, [RED_DYE] = 20, [SILKEN_THREAD] = 10 },
-				note = "Beta: Mageweave is rare and dear, the shirts use silk instead." },
+				note = "Keep the bolts: 180 (900 Mageweave) through 225. Bolts off the AH are fine if they're cheaper than the cloth." },
 			{ lo = 150, hi = 170, crafts = 20, recipe = "Crimson Silk Vest", uses = { [BOLT_SILK] = 80, [RED_DYE] = 40, [FINE_THREAD] = 40 } },
 			{ lo = 170, hi = 190, crafts = 26, recipe = "Crimson Silk Pantaloons", uses = { [BOLT_SILK] = 104, [RED_DYE] = 52, [SILKEN_THREAD] = 52 },
-				note = "Yellow at 180. Beta: Bolt of Mageweave is cheaper on the AH than the cloth." },
+				note = "Yellow at 180." },
 			{ lo = 190, hi = 215, crafts = 38, recipe = "Black Mageweave Gloves", uses = { [BOLT_MAGEWEAVE] = 76, [HEAVY_SILKEN_THREAD] = 76 },
 				note = "Yellow from 195, green from 210, so expect extra crafts." },
 			{ lo = 215, hi = 225, crafts = 26, recipe = "Mageweave Bag", uses = { [BOLT_MAGEWEAVE] = 104, [SILKEN_THREAD] = 52 } },
-			-- 225-300 isn't written yet (Artisan untested on beta).
+			-- 225-265 (guide, "not final yet"). Bolts of Runecloth give no skill, so they're all made up front.
+			{ lo = 225, hi = 240, crafts = 24, recipe = "Runecloth Belt", uses = { [BOLT_RUNECLOTH] = 72, [RUNE_THREAD] = 24 },
+				note = "Artisan first. Make all 244 Bolts of Runecloth (1,220 Runecloth) now: bolts don't give points any more." },
+			{ lo = 240, hi = 265, crafts = 43, recipe = "Runecloth Gloves",
+				uses = { [BOLT_RUNECLOTH] = 172, [RUGGED_LEATHER] = 172, [RUNE_THREAD] = 43 },
+				note = "Pattern: Qia (Everlook, Winterspring). Past 265 the guide has no trainer or vendor recipe yet." },
+			-- 265-300 isn't written yet (world-drop Runecloth Shoulders / Wizardweave Turban are the candidates).
 		},
 	},
 	{
@@ -278,8 +317,8 @@ ns.GUIDES = {
 				uses = { [SOUL_DUST] = 16, [MAPLE_SEED] = 32, [LEADED_VIAL] = 16 },
 				note = "Formula: Kithas, Nata Dawnstrider, Thaddeus Webb (Undercity), Vaean (Darnassus), Tilli Thistlefuzz, Jessara Cordell (Stormwind). Maple Seed: Reagent vendor. Leaded Vial: Alchemy Supply." },
 			{ lo = 165, hi = 185, crafts = 22, recipe = "Enchant Boots - Lesser Agility", uses = { [SOUL_DUST] = 22 } },
-			{ lo = 185, hi = 200, crafts = 22, recipe = "Enchant Boots - Lesser Agility", choice = "vision", option = "souldust",
-				uses = { [SOUL_DUST] = 22 }, note = "Beta: Vision Dust is dear at the cap and Soul Dust isn't. Yellow, so expect extra crafts." },
+			{ lo = 185, hi = 200, crafts = 25, recipe = "Enchant Boots - Lesser Agility", choice = "vision", option = "souldust",
+				uses = { [SOUL_DUST] = 25 }, note = "Yellow, so expect extra crafts. Switch to Bracer - Strength if 2 Vision Dust costs less than 3 Soul Dust." },
 			{ lo = 185, hi = 200, crafts = 15, recipe = "Enchant Bracer - Strength", choice = "vision", option = "visiondust",
 				uses = { [VISION_DUST] = 15 } },
 			{ lo = 200, hi = 201, crafts = 1,  recipe = "Runed Truesilver Rod",
@@ -308,21 +347,24 @@ ns.GUIDES = {
 		},
 	},
 	{
-		key = "blacksmithing", name = "Blacksmithing", skillLine = 164, top = 225,
+		key = "blacksmithing", name = "Blacksmithing", skillLine = 164, top = 300,
 		choices = {
 			rod = { "belt", "silverrod", label = "75-80" },
-			mithril = { "mithril", "steel", label = "185-215" },
 			spurs = { "breastplate", "spurs", label = "215-225" },
 		},
-		-- Ore and stone come from the Miner, Medium Leather from the Skinners.
-		-- Bars are smelted from ore (or bought), so shortfalls show as ore.
-		mats = { ROUGH_STONE, COARSE_STONE, HEAVY_STONE, SOLID_STONE,
-			COPPER_ORE, TIN_ORE, SILVER_ORE, IRON_ORE, MITHRIL_ORE, MEDIUM_LEATHER },
+		-- Ore, stone and gems come from the Miner, leather from the Skinners,
+		-- Mageweave from everyone. Bars are smelted from ore (or bought), so
+		-- shortfalls show as ore.
+		mats = { ROUGH_STONE, COARSE_STONE, HEAVY_STONE, SOLID_STONE, DENSE_STONE,
+			COPPER_ORE, TIN_ORE, SILVER_ORE, IRON_ORE, MITHRIL_ORE, THORIUM_ORE, TRUESILVER_ORE,
+			MEDIUM_LEATHER, HEAVY_LEATHER, THICK_LEATHER, RUGGED_LEATHER, MAGEWEAVE,
+			CITRINE, STAR_RUBY, AQUAMARINE },
 		madeFrom = {
 			[ROUGH_GS] = { ROUGH_STONE, 2 }, [COARSE_GS] = { COARSE_STONE, 2 },
-			[HEAVY_GS] = { HEAVY_STONE, 3 }, [SOLID_GS] = { SOLID_STONE, 4 },
+			[HEAVY_GS] = { HEAVY_STONE, 3 }, [SOLID_GS] = { SOLID_STONE, 4 }, [DENSE_GS] = { DENSE_STONE, 4 },
 			[COPPER_BAR] = { COPPER_ORE, 1 }, [SILVER_BAR] = { SILVER_ORE, 1 },
 			[IRON_BAR] = { IRON_ORE, 1 }, [MITHRIL_BAR] = { MITHRIL_ORE, 1 },
+			[THORIUM_BAR] = { THORIUM_ORE, 1 }, [TRUESILVER_BAR] = { TRUESILVER_ORE, 1 },
 			[BRONZE_BAR] = { { COPPER_ORE, 0.5 }, { TIN_ORE, 0.5 } }, -- 1 Copper + 1 Tin = 2 Bronze
 			[STEEL_BAR] = { { IRON_ORE, 1 }, { COAL, 1 } },
 		},
@@ -344,30 +386,44 @@ ns.GUIDES = {
 			{ lo = 75,  hi = 80,  crafts = 5,  recipe = "Silver Rod", choice = "rod", option = "silverrod",
 				uses = { [SILVER_BAR] = 5, [ROUGH_GS] = 10 }, makes = { [SILVER_ROD] = 5 },
 				note = "If you have Silver Bars. Your Enchanter needs one of these at 109; the rest sell." },
-			{ lo = 80,  hi = 95,  crafts = 15, recipe = "Rough Bronze Leggings", uses = { [BRONZE_BAR] = 90 } },
+			{ lo = 80,  hi = 95,  crafts = 18, recipe = "Runed Copper Belt", uses = { [COPPER_BAR] = 180 } },
 			{ lo = 95,  hi = 100, crafts = 5,  recipe = "Patterned Bronze Bracers", uses = { [BRONZE_BAR] = 25, [COARSE_GS] = 10 } },
 			{ lo = 100, hi = 112, crafts = 20, recipe = "Heavy Grinding Stone", uses = { [HEAVY_STONE] = 60 }, makes = { [HEAVY_GS] = 20 },
-				note = "Keep all 20 for the Golden Scale Bracers at 175." },
+				note = "Keep all 20 for the Golden Scale Bracers at 180; they need 40, so 20 more (60 Heavy Stone) get made then." },
 			{ lo = 112, hi = 125, crafts = 13, recipe = "Patterned Bronze Bracers", uses = { [BRONZE_BAR] = 65, [COARSE_GS] = 26 } },
 			{ lo = 125, hi = 140, crafts = 24, recipe = "Bronze Shortsword", uses = { [BRONZE_BAR] = 120, [WEAK_FLUX] = 96, [MEDIUM_LEATHER] = 48 },
 				note = "Flux: Blacksmithing Supply vendor by the trainer in every capital." },
 			{ lo = 140, hi = 150, crafts = 10, recipe = "Bronze Warhammer", uses = { [BRONZE_BAR] = 80, [STRONG_FLUX] = 10, [MEDIUM_LEATHER] = 10 } },
-			{ lo = 150, hi = 165, crafts = 19, recipe = "Bronze Warhammer", uses = { [BRONZE_BAR] = 152, [STRONG_FLUX] = 19, [MEDIUM_LEATHER] = 19 },
+			{ lo = 150, hi = 170, crafts = 29, recipe = "Bronze Warhammer", uses = { [BRONZE_BAR] = 232, [STRONG_FLUX] = 29, [MEDIUM_LEATHER] = 29 },
 				note = "Expert first." },
-			{ lo = 165, hi = 175, crafts = 15, recipe = "Green Iron Bracers", uses = { [IRON_BAR] = 90, [GREEN_DYE] = 15 },
+			{ lo = 170, hi = 175, crafts = 9,  recipe = "Green Iron Bracers", uses = { [IRON_BAR] = 54, [GREEN_DYE] = 9 },
 				note = "Green Dye: Tamar (Orgrimmar) or Bombus Finespindle (Ironforge)." },
-			{ lo = 175, hi = 185, crafts = 10, recipe = "Golden Scale Bracers", uses = { [STEEL_BAR] = 50, [HEAVY_GS] = 20 },
+			{ lo = 175, hi = 180, crafts = 8,  recipe = "Solid Grinding Stone", uses = { [SOLID_STONE] = 32 }, makes = { [SOLID_GS] = 8 },
+				note = "Keep all 8: 6 for the Heavy Mithril Axes at 210." },
+			{ lo = 180, hi = 195, crafts = 20, recipe = "Golden Scale Bracers", uses = { [STEEL_BAR] = 100, [HEAVY_GS] = 40 },
 				note = "Steel: smelt Iron Bar + Coal yourself at Mining 165. Coal: Blacksmithing Supply vendor." },
-			{ lo = 185, hi = 215, crafts = 36, recipe = "Mithril Plate Pants", choice = "mithril", option = "mithril", uses = { [MITHRIL_BAR] = 432 } },
-			{ lo = 185, hi = 200, crafts = 15, recipe = "Steel Breastplate", choice = "mithril", option = "steel",
-				uses = { [STEEL_BAR] = 240, [HEAVY_GS] = 45 }, note = "The steel route, for when Mithril is dearer than Steel + stone." },
-			{ lo = 200, hi = 215, crafts = 17, recipe = "Steel Plate Helm", choice = "mithril", option = "steel",
-				uses = { [STEEL_BAR] = 238, [SOLID_GS] = 17 } },
+			{ lo = 195, hi = 210, crafts = 21, recipe = "Heavy Mithril Gauntlet", uses = { [MITHRIL_BAR] = 126, [MAGEWEAVE] = 84 } },
+			{ lo = 210, hi = 215, crafts = 6,  recipe = "Heavy Mithril Axe",
+				uses = { [MITHRIL_BAR] = 72, [CITRINE] = 12, [SOLID_GS] = 6, [HEAVY_LEATHER] = 24 } },
 			{ lo = 215, hi = 225, crafts = 10, recipe = "Heavy Mithril Breastplate", choice = "spurs", option = "breastplate",
 				uses = { [MITHRIL_BAR] = 160 }, note = "Artisan: Brikk Keencraft, Booty Bay." },
 			{ lo = 215, hi = 225, crafts = 10, recipe = "Mithril Spurs", choice = "spurs", option = "spurs",
 				uses = { [MITHRIL_BAR] = 40, [SOLID_GS] = 30 }, note = "Plans: Mithril Spurs is a world drop, check the AH." },
-			-- 225+ is untested in the guide (beta cap).
+			-- 225-300 (guide, still "untested on live"). The Imperial Plate plans come from
+			-- Derotain Mudsipper's quests in Gadgetzan (20/20/40/60 Thorium Bar each, 140 in all,
+			-- on top of the 1,770 below). If the quests still need skill 265 on live, Ebon Shiv
+			-- (Mithril + Truesilver) and Ornate Thorium Handaxe fill 240-270 instead.
+			{ lo = 225, hi = 230, crafts = 5,  recipe = "Dense Sharpening Stone", uses = { [DENSE_STONE] = 5 } },
+			{ lo = 230, hi = 240, crafts = 16, recipe = "Heavy Mithril Boots", uses = { [MITHRIL_BAR] = 224, [THICK_LEATHER] = 64 } },
+			{ lo = 240, hi = 245, crafts = 5,  recipe = "Imperial Plate Belt",
+				uses = { [THORIUM_BAR] = 110, [RUGGED_LEATHER] = 30, [AQUAMARINE] = 5 },
+				note = "Plans: Derotain Mudsipper (Gadgetzan) quest, 20 Thorium Bar. Bring 250 Thorium Bar for the whole chain." },
+			{ lo = 245, hi = 270, crafts = 27, recipe = "Imperial Plate Bracers", uses = { [THORIUM_BAR] = 540, [STAR_RUBY] = 27 },
+				note = "Plans: the next Derotain quest, 20 Thorium Bar." },
+			{ lo = 270, hi = 290, crafts = 20, recipe = "Imperial Plate Boots",
+				uses = { [THORIUM_BAR] = 680, [STAR_RUBY] = 20, [AQUAMARINE] = 20 }, note = "Plans: Derotain quest, 40 Thorium Bar." },
+			{ lo = 290, hi = 300, crafts = 10, recipe = "Imperial Plate Leggings", uses = { [THORIUM_BAR] = 440, [STAR_RUBY] = 20 },
+				note = "Plans: Derotain quest, 60 Thorium Bar. Green by now, so expect extra crafts." },
 		},
 	},
 	{
@@ -447,9 +503,12 @@ local NAMES = {
 	[GOLD_ORE] = "Gold Ore", [MITHRIL_ORE] = "Mithril Ore",
 	[COPPER_BAR] = "Copper Bar", [TIN_BAR] = "Tin Bar", [BRONZE_BAR] = "Bronze Bar", [SILVER_BAR] = "Silver Bar",
 	[IRON_BAR] = "Iron Bar", [GOLD_BAR] = "Gold Bar", [STEEL_BAR] = "Steel Bar", [MITHRIL_BAR] = "Mithril Bar",
+	[THORIUM_BAR] = "Thorium Bar", [TRUESILVER_BAR] = "Truesilver Bar",
 	[ROUGH_STONE] = "Rough Stone", [COARSE_STONE] = "Coarse Stone", [HEAVY_STONE] = "Heavy Stone", [SOLID_STONE] = "Solid Stone",
+	[DENSE_STONE] = "Dense Stone",
 	[ROUGH_GS] = "Rough Grinding Stone", [COARSE_GS] = "Coarse Grinding Stone",
-	[HEAVY_GS] = "Heavy Grinding Stone", [SOLID_GS] = "Solid Grinding Stone",
+	[HEAVY_GS] = "Heavy Grinding Stone", [SOLID_GS] = "Solid Grinding Stone", [DENSE_GS] = "Dense Grinding Stone",
+	[RUNECLOTH] = "Runecloth", [BOLT_RUNECLOTH] = "Bolt of Runecloth", [RUNE_THREAD] = "Rune Thread", [BLACK_DYE] = "Black Dye",
 	[2452] = "Swiftthistle", [2453] = "Bruiseweed", [3355] = "Wild Steelbloom", [3358] = "Khadgar's Whisker",
 	[3369] = "Grave Moss", [3818] = "Fadeleaf", [3819] = "Wintersbite", [3821] = "Goldthorn",
 	[4625] = "Firebloom", [8845] = "Ghost Mushroom", [8846] = "Gromsblood",
