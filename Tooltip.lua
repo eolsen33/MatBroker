@@ -85,6 +85,7 @@ local function onItem(tooltip, data)
 	if not link then return end
 
 	local id = tonumber(tostring(link):match("item:(%d+)")) or tonumber(link)
+	if ns.db.crates ~= false and ns.AddCrateLines(tooltip, data) then return end
 	if id and ns.TRACKED[id] then addRouteLines(tooltip, id) else addWhiteLines(tooltip, id, link) end
 	if id and ns.IS_MAT[id] then
 		addMatLines(tooltip, id)

@@ -91,6 +91,29 @@ local function countItems(bags)
 	return out
 end
 
+-- Any item, bags only (the crate tooltip needs items no guide tracks).
+function ns.BagCount(id)
+	local n = 0
+	for _, bag in ipairs(bagIDs()) do
+		for slot = 1, GetNumSlots(bag) or 0 do
+			local item, count = slotItem(bag, slot)
+			if item == id then n = n + (count or 1) end
+		end
+	end
+	return n
+end
+
+function ns.BagItemByName(name)
+	name = name:lower()
+	for _, bag in ipairs(bagIDs()) do
+		for slot = 1, GetNumSlots(bag) or 0 do
+			local item = slotItem(bag, slot)
+			local info = item and ns.ItemInfo(item)
+			if info and info.name:lower() == name then return item end
+		end
+	end
+end
+
 -- BoE greens for the AH ---------------------------------------------------
 
 local scanTip
@@ -200,6 +223,79 @@ function ns.Whites()
 		end
 	end
 	return out
+end
+
+-- Waylaid Crates. An unfilled crate sells on the AH, so it rides along to the
+-- seller with the surplus. Once the character holding it also has a whole
+-- bundle in its bags, the crate and that bundle go back to whoever mailed it
+-- (the filled crate is bound, so the sender has to fill it). A crate that is
+-- ready to fill is never offered to the seller. "/mb keep" holds one back.
+local function crateBundles(bag, slot)
+	tooltipBind(bag, slot) -- loads the scan tooltip with this slot
+	return ns.ParseCrate(ns.TooltipLines(scanTip))
+end
+
+-- Every unbound crate in the bags: { { id = crate, ready = { id, qty } or nil } }.
+-- `ready` is the cheapest bundle these bags can cover; two crates never
+-- claim the same mats.
+local function crateList()
+	local out, used = {}, {}
+	local keep = keepList(ns.Me())
+	for _, bag in ipairs(bagIDs()) do
+		for slot = 1, GetNumSlots(bag) or 0 do
+			local id, _, link, isBound = slotDetail(bag, slot)
+			local info = id and not isBound and not keep[id] and ns.ItemInfo(link or id)
+			if info and info.name:find("^Waylaid Crate") then
+				local bundles = crateBundles(bag, slot) or {}
+				local _, count = slotItem(bag, slot)
+				for _ = 1, count or 1 do
+					local best
+					for _, b in ipairs(bundles) do
+						local mat = ns.CrateItemID(b.name)
+						if mat and ns.BagCount(mat) - (used[mat] or 0) >= b.qty then
+							local cost = (ns.Price(mat) or math.huge) * b.qty
+							if not best or cost < best.cost then best = { id = mat, qty = b.qty, cost = cost } end
+						end
+					end
+					if best then used[best.id] = (used[best.id] or 0) + best.qty end
+					table.insert(out, { id = id, ready = best })
+				end
+			end
+		end
+	end
+	return out
+end
+
+-- Crates for the AH seller: { [id] = qty }.
+function ns.Crates()
+	local out = {}
+	for _, c in ipairs(crateList()) do
+		if not c.ready then out[c.id] = (out[c.id] or 0) + 1 end
+	end
+	return out
+end
+
+-- Crates these bags can complete, with their bundle, per character they go
+-- back to: { [name] = { [id] = qty } }. Second value: ready crates with no
+-- known sender.
+function ns.CrateReturns()
+	local realm = ns.Realm()
+	local _, myName = ns.Me()
+	local out, orphans = {}, 0
+	for _, c in ipairs(crateList()) do
+		if c.ready then
+			local to = (realm.crateFrom and realm.crateFrom[c.id]) or realm.crateMain
+			if to and not ns.Chars()[to] then to = nil end
+			if not to then
+				orphans = orphans + 1
+			elseif to ~= myName then
+				out[to] = out[to] or {}
+				out[to][c.id] = (out[to][c.id] or 0) + 1
+				out[to][c.ready.id] = (out[to][c.ready.id] or 0) + c.ready.qty
+			end
+		end
+	end
+	return out, orphans
 end
 
 -- An item in the bags by link, ID or (part of a) name.
@@ -622,6 +718,22 @@ end
 
 -- /mb seller <name>: which character sells the surplus on the AH. "/mb
 -- seller none" goes back to auto (Enchanting or Tailoring).
+-- /mb crates main <name>: who gets a completed crate back when MatBroker
+-- didn't see who mailed it (crates sent before 1.2.0, or handed over).
+function ns.SetCrateMain(text)
+	local realm = ns.Realm()
+	if text == "" or text:lower() == "none" then
+		realm.crateMain = nil
+		ns.Print("Completed crates only go back to the character that mailed them.")
+	else
+		local key = findChar(text)
+		if not key then ns.Print("I don't know a character called", text .. ". Log it in once, or see /mb chars.") return end
+		realm.crateMain = key
+		ns.Print("Completed crates with no known sender go to", ns.MailName(key) .. ".")
+	end
+	ns.RefreshMailPanel()
+end
+
 function ns.SetSeller(text)
 	text = trim(text)
 	local realm = ns.Realm()
@@ -685,6 +797,18 @@ function ns.MailPlan()
 	for id, n in pairs(mine.bags) do left[id] = n end
 	local plan, surplus = {}, {}
 
+	-- Crates this character can complete go back to their sender, bundle and
+	-- all, before the guides get a look at those mats.
+	if ns.db.mailCrates ~= false then
+		for to, items in pairs((ns.CrateReturns())) do
+			plan[to] = plan[to] or {}
+			for id, n in pairs(items) do
+				plan[to][id] = (plan[to][id] or 0) + n
+				if left[id] then left[id] = math.max(0, left[id] - n) end
+			end
+		end
+	end
+
 	for _, guide in ipairs(ns.GUIDES) do
 		local c, name = ns.Crafter(guide)
 		if c and name ~= myName then
@@ -719,6 +843,9 @@ function ns.MailPlan()
 	-- Sellable whites no guide tracks ride along with the surplus.
 	if surplusTo and ns.db.mailWhites then
 		for id, n in pairs(ns.Whites()) do surplus[id] = (surplus[id] or 0) + n end
+	end
+	if surplusTo and ns.db.mailCrates ~= false then
+		for id, n in pairs(ns.Crates()) do surplus[id] = (surplus[id] or 0) + n end
 	end
 	return plan, surplus, surplusTo, greens
 end
@@ -783,23 +910,31 @@ hooksecurefunc("SendMail", function(recipient)
 	local to = findChar(recipient)
 	local _, myName = me()
 	if not to or to == myName then return end
-	local items = {}
+	local items, crates = {}, {}
 	for i = 1, ATTACH_SEND do
 		local _, id, _, count = GetSendMailItem(i)
 		if id and ns.TRACKED[id] then items[id] = (items[id] or 0) + (count or 1) end
+		local name = id and GetSendMailItem(i)
+		if type(name) == "string" and name:find("^Waylaid Crate") then crates[id] = true end
 	end
-	sending = { to = to, items = items, typed = recipient }
+	sending = { to = to, items = items, typed = recipient, crates = crates, from = myName }
 end)
 
 ns.On("MAIL_SEND_SUCCESS", function()
 	if sending then
 		learnName(sending.to, sending.typed)
+		-- Remember who a crate came from so it can come back; a crate going
+		-- home to its sender is done.
+		local realm = ns.Realm()
+		realm.crateFrom = realm.crateFrom or {}
+		for id in pairs(sending.crates) do
+			if realm.crateFrom[id] == sending.to then realm.crateFrom[id] = nil else realm.crateFrom[id] = sending.from end
+		end
 		if not next(sending.items) then sending = nil return end
 		local c = ns.Chars()[sending.to]
 		if c then
 			for id, n in pairs(sending.items) do c.transit[id] = (c.transit[id] or 0) + n end
 		end
-		local realm = ns.Realm()
 		realm.mailed = realm.mailed or {}
 		local tally = realm.mailed[sending.to] or {}
 		realm.mailed[sending.to] = tally
@@ -1067,6 +1202,10 @@ function ns.RefreshMailPanel()
 	end
 	local notes = {}
 	if #entries == 0 then table.insert(notes, "Nothing to mail from these bags.") end
+	local _, orphanCrates = ns.CrateReturns()
+	if orphanCrates > 0 and ns.db.mailCrates ~= false then
+		table.insert(notes, "A crate here is ready to fill, but I didn't see who mailed it: /mb crates main <name>.")
+	end
 	if greens and not surplusTo then table.insert(notes, "Pick an AH seller to mail the greens to: /mb seller <name>.") end
 	if #missing > 0 then table.insert(notes, "No " .. table.concat(missing, " or ") .. " alt known yet. Log it in once.") end
 	local seller = ns.SurplusAlt()

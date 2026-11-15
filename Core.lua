@@ -198,6 +198,9 @@ local HELP = {
 	"/mb cut <percent>  - AH cut on sales (now %g%%)",
 	"/mb source auto|scan|auctionator|manual  - where prices come from (now %s)",
 	"/mb tooltip  - toggle tooltip lines",
+	"/mb crates  - toggle the cheapest-bundle lines on Waylaid Crate tooltips",
+	"/mb crates mail  - toggle mailing Waylaid Crates: unfilled ones to the AH seller, and back with their bundle once an alt has it",
+	"/mb crates main <name>  - who gets a completed crate back when I didn't see who mailed it",
 	"/mb greens  - toggle mailing BoE greens to the AH seller",
 	"/mb whites  - toggle mailing sellable white trade goods and gems to the AH seller",
 	"/mb keep <item or link>  - this character keeps that item (/mb keep alone lists them)",
@@ -303,6 +306,17 @@ SlashCmdList.MATBROKER = function(msg)
 		ns.ToggleKeep(rest)
 	elseif cmd == "sell" then
 		ns.ToggleSell(rest)
+	elseif cmd == "crates" then
+		if rest:lower():match("^main") then
+			ns.SetCrateMain(rest:match("^%S+%s*(.-)$"))
+		elseif rest:lower() == "mail" then
+			ns.db.mailCrates = ns.db.mailCrates == false
+			ns.Print("Mailing Waylaid Crates:", ns.db.mailCrates and "on" or "off")
+			ns.RefreshMailPanel()
+		else
+			ns.db.crates = ns.db.crates == false
+			ns.Print("Waylaid Crate lines", ns.db.crates and "on" or "off")
+		end
 	elseif cmd == "tooltip" then
 		ns.db.tooltip = not ns.db.tooltip
 		ns.Print("tooltip lines", ns.db.tooltip and "on" or "off")

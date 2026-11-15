@@ -148,8 +148,11 @@ end
 function ns.ScanMats()
 	start("mat scan", function()
 		local updated = 0
-		for i, m in ipairs(ns.MATS) do
-			setStatus(string.format("Scanning %s (%d/%d)", ns.MatName(m.id), i, #ns.MATS))
+		local mats = {}
+		for _, m in ipairs(ns.MATS) do mats[#mats + 1] = m end
+		for _, id in ipairs(ns.CrateScanIDs()) do mats[#mats + 1] = { id = id } end
+		for i, m in ipairs(mats) do
+			setStatus(string.format("Scanning %s (%d/%d)", ns.MatName(m.id), i, #mats))
 			local listings = modern() and modernSearch(m.id) or legacySearch(m.id)
 			local price, minPrice, qty = samplePrice(listings)
 			if price then
@@ -157,7 +160,7 @@ function ns.ScanMats()
 				updated = updated + 1
 			end
 		end
-		ns.Print(string.format("scan done: %d of %d mats have listings.", updated, #ns.MATS))
+		ns.Print(string.format("scan done: %d of %d mats have listings.", updated, #mats))
 	end)
 end
 
