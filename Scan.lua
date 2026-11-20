@@ -150,7 +150,13 @@ function ns.ScanMats()
 		local updated = 0
 		local mats = {}
 		for _, m in ipairs(ns.MATS) do mats[#mats + 1] = m end
-		for _, id in ipairs(ns.CrateScanIDs()) do mats[#mats + 1] = { id = id } end
+		local queued = {}
+		for _, m in ipairs(mats) do queued[m.id] = true end
+		for _, ids in ipairs({ ns.CrateScanIDs(), ns.FarmScanIDs() }) do
+			for _, id in ipairs(ids) do
+				if not queued[id] then queued[id] = true; mats[#mats + 1] = { id = id } end
+			end
+		end
 		for i, m in ipairs(mats) do
 			setStatus(string.format("Scanning %s (%d/%d)", ns.MatName(m.id), i, #mats))
 			local listings = modern() and modernSearch(m.id) or legacySearch(m.id)
@@ -160,7 +166,7 @@ function ns.ScanMats()
 				updated = updated + 1
 			end
 		end
-		ns.Print(string.format("scan done: %d of %d mats have listings.", updated, #mats))
+		ns.Print(string.format("scan done: %d of %d items have listings.", updated, #mats))
 	end)
 end
 

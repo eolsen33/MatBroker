@@ -85,7 +85,7 @@ local function countItems(bags)
 	for _, bag in ipairs(bags) do
 		for slot = 1, GetNumSlots(bag) or 0 do
 			local id, count = slotItem(bag, slot)
-			if id and ns.TRACKED[id] then out[id] = (out[id] or 0) + count end
+			if id and ns.COUNTED[id] then out[id] = (out[id] or 0) + count end
 		end
 	end
 	return out
@@ -623,7 +623,7 @@ end
 -- "/mb path oil fireoil|manapot, ..." for every choice in every guide.
 function ns.PathUsage()
 	local parts = {}
-	for _, g in ipairs(ns.GUIDES) do
+	for _, g in ipairs(ns.ALL_GUIDES) do
 		local keys = {}
 		for choice in pairs(g.choices) do table.insert(keys, choice) end
 		table.sort(keys)
@@ -636,7 +636,7 @@ end
 
 function ns.SetPath(text)
 	local choice, option = (text or ""):lower():match("^(%S+)%s+(%S+)$")
-	for _, g in ipairs(ns.GUIDES) do
+	for _, g in ipairs(ns.ALL_GUIDES) do
 		local options = choice and g.choices[choice]
 		if options then
 			for _, o in ipairs(options) do
@@ -854,7 +854,7 @@ end
 
 function ns.CheckIDs()
 	local bad, pending = 0, 0
-	for id in pairs(ns.TRACKED) do
+	for id in pairs(ns.COUNTED) do
 		local info = ns.ItemInfo(id)
 		local expected = ns.GUIDE_NAMES[id]
 		if not info then
@@ -957,7 +957,7 @@ ns.On("MAIL_INBOX_UPDATE", function()
 		end
 		for a = 1, ATTACH_RECEIVE do
 			local _, id, _, count = GetInboxItem(i, a)
-			if id and ns.TRACKED[id] then inbox[id] = (inbox[id] or 0) + (count or 1) end
+			if id and ns.COUNTED[id] then inbox[id] = (inbox[id] or 0) + (count or 1) end
 		end
 	end
 	c.inbox = inbox
@@ -1126,6 +1126,7 @@ local function buildPanel()
 	panel.title = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 	panel.title:SetPoint("TOP", 0, -5)
 	panel.title:SetText("MatBroker: mail out")
+	ns.FixClose(panel)
 	panel.sections = {}
 	for s = 1, SECTIONS do
 		local sec = {}

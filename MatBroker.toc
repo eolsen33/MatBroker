@@ -1,8 +1,8 @@
 ## Interface: 16001
 ## Title: MatBroker
-## Notes: Enchanting mat prices and DE values, which alt your herbs, skins, cloth and ore go to, and 1-300 leveling guides for six professions.
+## Notes: Enchanting mat prices and DE values, which alt your herbs, skins, cloth and ore go to, leveling guides for eight professions that follow your profession window, a farming recorder that prices your loot, and a fishing tracker.
 ## Author: Eric Olsen
-## Version: 1.2.0
+## Version: 1.3.0
 ## SavedVariables: MatBrokerDB
 ## OptionalDeps: Auctionator
 ## IconTexture: Interface\Icons\INV_Enchant_DustStrange
@@ -18,6 +18,8 @@ Calc.lua
 Scan.lua
 Alts.lua
 Crate.lua
+Farm.lua
+Fishing.lua
 GuidePanel.lua
 Tooltip.lua
 UI.lua

@@ -23,6 +23,10 @@ local COLUMNS = {
 		{ "Item", 200, "LEFT" }, { "ilvl", 35, "RIGHT" }, { "Price", 95, "RIGHT" },
 		{ "DE value", 95, "RIGHT" }, { "Profit", 95, "RIGHT" },
 	},
+	farm = {
+		{ "Looted", 200, "LEFT" }, { "Qty", 40, "RIGHT" }, { "Sells for", 95, "RIGHT" },
+		{ "Total", 95, "RIGHT" }, { "Price from", 90, "RIGHT" },
+	},
 }
 
 local function makeRow(parent, i)
@@ -191,7 +195,52 @@ local function fillAlts()
 	return list, true
 end
 
-local FILL = { mats = fillMats, brackets = fillBrackets, alts = fillAlts, deals = fillDeals }
+local function fillFarm()
+	local list = {}
+	local s = ns.FarmView()
+	if not s then
+		table.insert(list, { GREY .. "Nothing recorded yet. Click Start farming, then go loot.|r", "", "", "", "" })
+		return list, false
+	end
+	for _, r in ipairs((ns.FarmSummary(s))) do
+		local it = r.item
+		local from = r.source and (r.source .. (r.time and (" " .. ns.Age(r.time)) or "")) or "none"
+		if r.source == "bound" then from = "can't sell" end
+		table.insert(list, {
+			icon = ns.MatIcon(it.id), link = it.link,
+			it.link or ns.MatName(it.id), tostring(it.qty), ns.Money(r.each), ns.Money(r.value),
+			(r.each and r.source ~= "vendor") and from or (GREY .. from .. "|r"),
+		})
+	end
+	if s.grey then
+		table.insert(list, {
+			icon = 133784, -- coin
+			GREY .. "Grey items|r", tostring(s.grey.qty), "", ns.Money(s.grey.value), GREY .. "vendor|r",
+		})
+	end
+	if #list == 0 then
+		table.insert(list, { GREY .. "Recording. Nothing looted yet.|r", "", "", "", "" })
+		return list, false
+	end
+	return list, true
+end
+
+local function farmStatus()
+	local s, index, count, recording = ns.FarmView()
+	if not s then return "", GREY .. "Whites and better are listed at AH price (your scan or Auctionator); greys add up at vendor price.|r" end
+	local _, total, units, unpriced = ns.FarmSummary(s)
+	local secs = ns.FarmElapsed(s)
+	local all = total + (s.coin or 0)
+	local status = string.format("Items %s  +  coin %s", ns.Money(total), ns.Money(s.coin or 0))
+	if secs >= 60 then status = status .. string.format("  =  %s/hr", ns.Money(all / secs * 3600)) end
+	local where = string.format("%s%s  ·  %s  ·  %s  ·  %s  ·  %d items%s  ·  session %d of %d|r",
+		recording and "|cff40ff40Recording|r  ·  " or "", GREY .. (s.char or "?"), s.zone or "?",
+		date("%b %d %H:%M", s.start), ns.FarmDuration(secs), units,
+		unpriced > 0 and string.format("  ·  %d with no price (scan the AH)", unpriced) or "", index, count)
+	return status, where
+end
+
+local FILL = { mats = fillMats, brackets = fillBrackets, alts = fillAlts, deals = fillDeals, farm = fillFarm }
 
 function ns.Refresh()
 	if not frame or not frame:IsShown() then return end
@@ -215,6 +264,21 @@ function ns.Refresh()
 	end
 	frame.scanBtn:SetEnabled(ns.ahOpen)
 	frame.dealsBtn:SetEnabled(ns.ahOpen)
+	local farming = activeTab == "farm"
+	frame.dealsBtn:SetShown(not farming)
+	frame.farmBtn:SetShown(farming)
+	frame.prevBtn:SetShown(farming)
+	frame.nextBtn:SetShown(farming)
+	if farming then
+		local _, index, count = ns.FarmView()
+		frame.farmBtn:SetText(ns.FarmActive() and "Stop farming" or "Start farming")
+		frame.prevBtn:SetEnabled(index < count)
+		frame.nextBtn:SetEnabled(index > 1)
+		local status, where = farmStatus()
+		frame.status:SetText(ns.status or status)
+		frame.settings:SetText(where)
+		return
+	end
 	if activeTab == "alts" then
 		frame.status:SetText(GREY .. "Mailed = total you've sent that alt. Still needed = rest of the guide minus what it holds or has in the mail.|r")
 	else
@@ -238,16 +302,17 @@ local function build()
 	frame:SetClampedToScreen(true)
 	frame:SetScript("OnShow", ns.Refresh)
 	tinsert(UISpecialFrames, "MatBrokerFrame") -- Esc closes it
+	ns.FixClose(frame)
 
 	frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 	frame.title:SetPoint("TOP", 0, -5)
 	frame.title:SetText("MatBroker")
 
-	local tabs = { { "mats", "Mat prices" }, { "brackets", "Green DE values" }, { "deals", "Deals" }, { "alts", "Alt mats" } }
+	local tabs = { { "mats", "Mat prices" }, { "brackets", "Green DE values" }, { "deals", "Deals" }, { "alts", "Alt mats" }, { "farm", "Farming" } }
 	for i, t in ipairs(tabs) do
 		local b = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		b:SetSize(136, 22)
-		b:SetPoint("TOPLEFT", 12 + (i - 1) * 140, -30)
+		b:SetSize(112, 22)
+		b:SetPoint("TOPLEFT", 12 + (i - 1) * 116, -30)
 		b:SetText(t[2])
 		b:SetScript("OnClick", function() ns.ShowTab(t[1]) end)
 		tabButtons[t[1]] = b
@@ -282,8 +347,25 @@ local function build()
 	frame.dealsBtn:SetText("Find deals")
 	frame.dealsBtn:SetScript("OnClick", ns.FindDeals)
 
+	-- Farming tab: Start/Stop sits where Find deals is, with older/newer
+	-- session arrows; the status text moves right to clear them.
+	frame.farmBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+	frame.farmBtn:SetSize(110, 22)
+	frame.farmBtn:SetPoint("LEFT", frame.scanBtn, "RIGHT", 6, 0)
+	frame.farmBtn:SetScript("OnClick", ns.FarmToggle)
+	frame.prevBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+	frame.prevBtn:SetSize(24, 22)
+	frame.prevBtn:SetPoint("LEFT", frame.farmBtn, "RIGHT", 6, 0)
+	frame.prevBtn:SetText("<")
+	frame.prevBtn:SetScript("OnClick", function() ns.FarmPage(1) end)
+	frame.nextBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+	frame.nextBtn:SetSize(24, 22)
+	frame.nextBtn:SetPoint("LEFT", frame.prevBtn, "RIGHT", 2, 0)
+	frame.nextBtn:SetText(">")
+	frame.nextBtn:SetScript("OnClick", function() ns.FarmPage(-1) end)
+
 	frame.status = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	frame.status:SetPoint("LEFT", frame.dealsBtn, "RIGHT", 10, 0)
+	frame.status:SetPoint("LEFT", frame.nextBtn, "RIGHT", 10, 0)
 	frame.status:SetPoint("RIGHT", -14, 0)
 	frame.status:SetJustifyH("LEFT")
 

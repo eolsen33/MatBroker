@@ -3,19 +3,21 @@ local _, ns = ...
 -- Leveling guide for the crafter alts: the step you're on, what it still
 -- takes, when to visit the trainer, and what comes next. Progress is your
 -- skill level, so it moves as you craft. Opens on login for a character with
--- a guided profession, and next to the profession window. Gathering steps
--- (Mining) show where to go instead of what to make.
+-- a guided profession, and docks to the bottom-right corner of the profession
+-- window, following whichever profession that window is showing. Gathering
+-- steps (Mining) show where to go instead of what to make.
 
 local GREY, GREEN, RED, GOLD, ORANGE = "|cff9d9d9d", "|cff40ff40", "|cffff5555", "|cffffd100", "|cffff9933"
 local WIDTH, PAD = 310, 14
 local NEXT_STEPS = 3
 
 local panel, guideKey
+local hiding, dismissed = false, nil -- dismissed: guide key you closed with the X while its window was up
 
 local function myGuides()
 	local c = ns.Me()
 	local list = {}
-	for _, g in ipairs(ns.GUIDES) do
+	for _, g in ipairs(ns.ALL_GUIDES) do
 		if c.profs[g.skillLine] then table.insert(list, g) end
 	end
 	return list, c
@@ -60,19 +62,101 @@ local function have(c, id)
 end
 
 -- Profession window ------------------------------------------------------
+-- Forever has the retail window (ProfessionsFrame + C_TradeSkillUI); the old
+-- TradeSkillFrame calls are kept as a fallback.
 
-local function tradeSkillOpen(guide)
-	if not (TradeSkillFrame and TradeSkillFrame:IsShown() and GetTradeSkillLine) then return false end
-	local line = GetTradeSkillLine()
-	return line == guide.name or line == guide.window or line == ns.ProfessionName(guide.skillLine)
+local function profWindow()
+	if ProfessionsFrame and ProfessionsFrame:IsShown() then return ProfessionsFrame end
+	if TradeSkillFrame and TradeSkillFrame:IsShown() then return TradeSkillFrame end
 end
 
-local function recipeIndex(recipe)
-	if not (GetNumTradeSkills and GetTradeSkillInfo) then return nil end
-	for i = 1, GetNumTradeSkills() do
-		local name, kind, available = GetTradeSkillInfo(i)
-		if kind ~= "header" and name == recipe then return i, available or 0 end
+-- The profession the window is showing: skill line ID, name, skill, cap.
+local function openProfession()
+	if not profWindow() then return nil end
+	local T = C_TradeSkillUI
+	if T and T.GetBaseProfessionInfo then
+		local ok, info = pcall(T.GetBaseProfessionInfo)
+		if ok and type(info) == "table" and (info.professionID or 0) > 0 then
+			local skill, max = info.skillLevel, info.maxSkillLevel
+			if not (skill and skill > 0) then skill, max = nil, nil end
+			return info.professionID, info.professionName, skill, max
+		end
 	end
+	if GetTradeSkillLine then
+		local name, skill, max = GetTradeSkillLine()
+		if name and name ~= "UNKNOWN" then return nil, name, skill, max end
+	end
+end
+
+-- The guide for the open profession (nil when it has none), and whether a
+-- profession is open at all.
+local function openGuide()
+	local id, name, skill, max = openProfession()
+	if not (id or name) then return nil, false end
+	for _, g in ipairs(ns.ALL_GUIDES) do
+		if (id and g.skillLine == id) or (name and (name == g.name or name == g.window
+			or name == ns.ProfessionName(g.skillLine))) then
+			return g, true, skill, max
+		end
+	end
+	return nil, true
+end
+
+-- A recipe you know in the open window, by name.
+local function findRecipe(recipe)
+	local T = C_TradeSkillUI
+	if T and T.GetAllRecipeIDs and T.GetRecipeInfo then
+		local ok, ids = pcall(T.GetAllRecipeIDs)
+		if ok and type(ids) == "table" and #ids > 0 then
+			for _, id in ipairs(ids) do
+				local info = T.GetRecipeInfo(id)
+				if info and info.name == recipe and info.learned ~= false then
+					return { id = id, available = info.numAvailable or 0 }
+				end
+			end
+			return nil
+		end
+	end
+	if GetNumTradeSkills and GetTradeSkillInfo then
+		for i = 1, GetNumTradeSkills() do
+			local name, kind, available = GetTradeSkillInfo(i)
+			if kind ~= "header" and name == recipe then return { index = i, available = available or 0 } end
+		end
+	end
+end
+
+local function selectRecipe(r)
+	if r.id then
+		if C_TradeSkillUI.OpenRecipe then pcall(C_TradeSkillUI.OpenRecipe, r.id) end
+	elseif TradeSkillFrame_SetSelection then
+		TradeSkillFrame_SetSelection(r.index)
+		if TradeSkillFrame_Update then TradeSkillFrame_Update() end
+	end
+end
+
+local function craftRecipe(r, count)
+	if r.id then C_TradeSkillUI.CraftRecipe(r.id, count) else DoTradeSkill(r.index, count) end
+end
+
+-- Sit in the bottom-right corner of the profession window, under its
+-- profession tabs. A guide too tall to fit under the tabs moves out past
+-- them so they stay clickable.
+local DOCK_GAP, DOCK_PAST_TABS, DOCK_ROOM = 16, 62, 0.4
+
+local function dock()
+	local frame = profWindow()
+	if not (panel and frame) then return false end
+	local tall = panel:GetHeight() > frame:GetHeight() * DOCK_ROOM
+	panel:ClearAllPoints()
+	panel:SetPoint("BOTTOMLEFT", frame, "BOTTOMRIGHT", tall and DOCK_PAST_TABS or DOCK_GAP, 0)
+	return true
+end
+
+local function undock()
+	if not panel then return end
+	local pos = ns.db.guidePos
+	panel:ClearAllPoints()
+	if pos then panel:SetPoint(pos[1], UIParent, pos[2], pos[3], pos[4]) else panel:SetPoint("LEFT", 40, 60) end
 end
 
 -- Panel ----------------------------------------------------------------
@@ -103,12 +187,16 @@ local function build()
 	panel:SetScript("OnDragStart", panel.StartMoving)
 	panel:SetScript("OnDragStop", function(self)
 		self:StopMovingOrSizing()
+		if dock() then return end -- docked: it goes back to its corner
 		local point, _, rel, x, y = self:GetPoint()
 		ns.db.guidePos = { point, rel, x, y }
 	end)
-	local pos = ns.db.guidePos
-	if pos then panel:SetPoint(pos[1], UIParent, pos[2], pos[3], pos[4]) else panel:SetPoint("LEFT", 40, 60) end
+	undock()
+	panel:SetScript("OnHide", function()
+		if not hiding and profWindow() then dismissed = guideKey end
+	end)
 	tinsert(UISpecialFrames, "MatBrokerGuide")
+	ns.FixClose(panel)
 
 	panel.title = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 	panel.title:SetPoint("TOP", 0, -5)
@@ -136,13 +224,8 @@ local function build()
 	panel.note = text("GameFontHighlightSmall")
 	panel.route = text("GameFontHighlightSmall")
 	panel.routeBtn = button("", 150, function(self) ns.SetPath(self.choice .. " " .. self.option) end)
-	panel.select = button("Select recipe", 110, function(self)
-		if TradeSkillFrame_SetSelection then
-			TradeSkillFrame_SetSelection(self.index)
-			if TradeSkillFrame_Update then TradeSkillFrame_Update() end
-		end
-	end)
-	panel.make = button("", 110, function(self) DoTradeSkill(self.index, self.count) end)
+	panel.select = button("Select recipe", 110, function(self) selectRecipe(self.recipe) end)
+	panel.make = button("", 110, function(self) craftRecipe(self.recipe, self.count) end)
 	panel.next = text("GameFontHighlightSmall")
 	panel.next:SetSpacing(2)
 end
@@ -161,37 +244,45 @@ local function hideAll()
 	end
 end
 
--- A button to flip to the other guide when this character has two, then size the panel.
+-- A button to step to this character's next guide when it has several, then size the panel.
 local function finish(list, guide, y)
-	if #list > 1 then
-		local other = list[1] == guide and list[2] or list[1]
+	if #list > 1 and not profWindow() then
+		local other = list[1]
+		for i, g in ipairs(list) do
+			if g == guide then other = list[i + 1] or list[1] break end
+		end
 		panel.switch.key = other.key
 		panel.switch:SetText("Show " .. other.name)
 		panel.switch:Show()
 		y = place(panel.switch, y - 4)
 	end
 	panel:SetHeight(-y + 10)
+	dock()
 end
 
 function ns.RefreshGuide()
 	if not (panel and panel:IsShown()) or not ns.db then return end
 	hideAll()
 	local list, c = myGuides()
-	local guide = currentGuide()
+	-- With the profession window up, the guide is that profession's.
+	local open, isOpen, openSkill, openMax = openGuide()
+	if open then guideKey = open.key end
+	local guide = open or (not isOpen and currentGuide()) or nil
 	local y = -32
 
 	if not guide then
-		panel.header:SetText(GREY .. "No guided profession on this character.|r")
+		panel.header:SetText(GREY .. (isOpen and "No guide for this profession yet.|r" or "No guided profession on this character.|r"))
 		y = place(panel.header, y)
 		panel.step:SetText("")
 		panel.bar:Hide()
 		panel:SetHeight(-y + 10)
+		dock()
 		return
 	end
 	guideKey = guide.key
 
-	local skill = c.profs[guide.skillLine] or 0
-	local max = c.profMax and c.profMax[guide.skillLine]
+	local skill = open and openSkill or c.profs[guide.skillLine] or 0
+	local max = open and openSkill and openMax or (c.profMax and c.profMax[guide.skillLine])
 	panel.header:SetText(string.format("%s %s%d / %d|r", guide.name, "|cffffffff", skill, guide.top))
 	y = place(panel.header, y, 4)
 
@@ -204,8 +295,9 @@ function ns.RefreshGuide()
 	if rank then
 		local faction = UnitFactionGroup("player") or "Horde"
 		local lines = { ORANGE .. "Train " .. rank.name .. " " .. guide.name .. "|r" .. GREY
-			.. string.format(" (needs skill %d, level %d%s)", rank.skill, rank.level, rank.cost and (", " .. rank.cost) or "") .. "|r" }
-		if UnitLevel("player") < rank.level then
+			.. string.format(" (needs skill %d%s%s)", rank.skill, rank.level and (", level " .. rank.level) or "",
+				rank.cost and (", " .. rank.cost) or "") .. "|r" }
+		if rank.level and UnitLevel("player") < rank.level then
 			table.insert(lines, RED .. "You're level " .. UnitLevel("player") .. ", train at " .. rank.level .. ".|r")
 		end
 		table.insert(lines, rank.trainers[faction] or "")
@@ -262,8 +354,10 @@ function ns.RefreshGuide()
 		y = place(panel.mats, y, 8)
 	end
 
-	if s.note then
-		panel.note:SetText(GREY .. s.note .. "|r")
+	local note = s.note
+	if type(note) == "table" then note = note[UnitFactionGroup("player") or "Horde"] or note.Horde end
+	if note then
+		panel.note:SetText(GREY .. note .. "|r")
 		panel.note:Show()
 		y = place(panel.note, y, 8)
 	end
@@ -285,14 +379,14 @@ function ns.RefreshGuide()
 		y = place(panel.routeBtn, y, 8)
 	end
 
-	if not s.zones and tradeSkillOpen(guide) then
-		local index, available = recipeIndex(s.recipe)
-		if index then
-			panel.select.index = index
+	if not s.zones and open == guide then
+		local found = findRecipe(s.recipe)
+		if found then
+			panel.select.recipe = found
 			panel.select:Show()
 			place(panel.select, y)
-			local count = math.min(available, crafts)
-			panel.make.index, panel.make.count = index, count
+			local count = math.min(found.available, crafts)
+			panel.make.recipe, panel.make.count = found, count
 			panel.make:SetText(count > 0 and ("Make " .. count) or "Missing mats")
 			panel.make:SetEnabled(count > 0)
 			panel.make:ClearAllPoints()
@@ -328,38 +422,74 @@ function ns.ShowGuide(key)
 end
 
 function ns.ToggleGuide()
-	if panel and panel:IsShown() then panel:Hide() else ns.ShowGuide() end
+	if panel and panel:IsShown() then panel:Hide() else dismissed = nil ns.ShowGuide() end
 end
 
 -- Open on login for crafter alts that still have guide left to do.
 ns.On("PLAYER_LOGIN", function()
 	C_Timer.After(3, function()
 		if not ns.db.guideAuto then return end
-		local list, c = myGuides()
-		for _, g in ipairs(list) do
-			if (c.profs[g.skillLine] or 0) < g.top then ns.ShowGuide(g.key) return end
+		-- Crafting guides only: Cooking and First Aid don't pop up on every character.
+		local c = ns.Me()
+		for _, g in ipairs(ns.GUIDES) do
+			local skill = c.profs[g.skillLine]
+			if skill and skill < g.top then ns.ShowGuide(g.key) return end
 		end
 	end)
 end)
 
--- Open beside the profession window, on that profession's guide.
-ns.On("TRADE_SKILL_SHOW", function()
-	C_Timer.After(0.1, function()
-		for _, g in ipairs(myGuides()) do
-			if tradeSkillOpen(g) then
-				ns.ShowGuide(g.key)
-				panel:ClearAllPoints()
-				panel:SetPoint("TOPLEFT", TradeSkillFrame, "TOPRIGHT", 4, 0)
-				return
+-- Follow the profession window: show the guide for the profession it has
+-- up, docked to its corner; no guide for that profession, no panel.
+local hooked = {}
+local windowUp, wasShown = false, false -- wasShown: the panel was already up when the window opened
+
+local function hidePanel()
+	hiding = true
+	panel:Hide()
+	hiding = false
+end
+
+local function follow()
+	local frame = profWindow()
+	if not frame then
+		if windowUp and panel then
+			undock()
+			if wasShown and not dismissed then
+				panel:Show()
+				ns.RefreshGuide()
+			else
+				hidePanel()
 			end
 		end
-	end)
-end)
-pcall(ns.On, "TRADE_SKILL_UPDATE", function() ns.RefreshGuide() end)
-ns.On("TRADE_SKILL_CLOSE", function()
-	if not panel then return end
-	local pos = ns.db.guidePos
-	panel:ClearAllPoints()
-	if pos then panel:SetPoint(pos[1], UIParent, pos[2], pos[3], pos[4]) else panel:SetPoint("LEFT", 40, 60) end
-	ns.RefreshGuide()
-end)
+		windowUp, dismissed = false, nil
+		return
+	end
+	if not windowUp then
+		windowUp, wasShown = true, (panel and panel:IsShown()) or false
+	end
+	if not hooked[frame] then
+		hooked[frame] = true
+		frame:HookScript("OnHide", function() C_Timer.After(0, follow) end)
+	end
+	local guide, isOpen = openGuide()
+	if guide then
+		-- Closed with the X: it stays closed until you change profession.
+		if dismissed ~= guide.key then
+			dismissed = nil
+			ns.ShowGuide(guide.key)
+		end
+	elseif isOpen and panel and panel:IsShown() then
+		hidePanel()
+	end
+end
+
+local function followSoon() C_Timer.After(0.1, follow) end
+
+ns.On("TRADE_SKILL_SHOW", followSoon)
+ns.On("TRADE_SKILL_CLOSE", followSoon)
+-- Switching profession tabs, and skill-ups, come through these (not every
+-- client has all of them).
+for _, event in ipairs({ "TRADE_SKILL_UPDATE", "TRADE_SKILL_LIST_UPDATE", "TRADE_SKILL_DATA_SOURCE_CHANGED",
+	"TRADE_SKILL_DATA_SOURCE_CHANGING" }) do
+	pcall(ns.On, event, followSoon)
+end

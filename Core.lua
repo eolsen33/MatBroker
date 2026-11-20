@@ -27,6 +27,19 @@ function ns.Print(...)
 	DEFAULT_CHAT_FRAME:AddMessage("|cff9d7cffMatBroker|r: " .. string.join(" ", tostringall(...)))
 end
 
+-- The template's X goes through HideUIPanel, which does nothing for our
+-- windows on Forever. Give it a plain Hide (and make one if it's missing).
+function ns.FixClose(frame)
+	local close = frame.CloseButton
+	if not close then
+		close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+		close:SetPoint("TOPRIGHT", 2, 2)
+		frame.CloseButton = close
+	end
+	close:SetFrameLevel(frame:GetFrameLevel() + 10)
+	close:SetScript("OnClick", function() frame:Hide() end)
+end
+
 -- Money ---------------------------------------------------------------
 
 function ns.Money(copper)
@@ -68,7 +81,7 @@ local GetItemInfo = (C_Item and C_Item.GetItemInfo) or _G.GetItemInfo
 
 -- Returns a table, or nil if the item isn't cached yet (a load is requested).
 function ns.ItemInfo(item)
-	local name, link, quality, ilvl, reqLevel, _, _, _, equipLoc, icon, sellPrice, classID, subclassID = GetItemInfo(item)
+	local name, link, quality, ilvl, reqLevel, _, _, _, equipLoc, icon, sellPrice, classID, subclassID, bindType = GetItemInfo(item)
 	if not name then
 		local id = tonumber(item) or (type(item) == "string" and tonumber(item:match("item:(%d+)")))
 		if id and C_Item and C_Item.RequestLoadItemDataByID then C_Item.RequestLoadItemDataByID(id) end
@@ -77,7 +90,7 @@ function ns.ItemInfo(item)
 	return {
 		name = name, link = link, quality = quality, ilvl = ilvl, reqLevel = reqLevel,
 		equipLoc = equipLoc, icon = icon, sellPrice = sellPrice or 0,
-		classID = classID, subclassID = subclassID,
+		classID = classID, subclassID = subclassID, bindType = bindType,
 	}
 end
 
@@ -99,6 +112,7 @@ local PROFESSIONS = {
 	[333] = { 7411, "Enchanting" },   [197] = { 3908, "Tailoring" },
 	[164] = { 2018, "Blacksmithing" }, [182] = { 2366, "Herbalism" },
 	[393] = { 8613, "Skinning" },     [186] = { 2575, "Mining" },
+	[185] = { 2550, "Cooking" },      [129] = { 3273, "First Aid" },
 }
 ns.ENCHANTING, ns.TAILORING = 333, 197
 
@@ -215,9 +229,11 @@ local HELP = {
 	"/mb ids  - check the guide item IDs against the game",
 	"/mb mailui  - list the send-mail edit boxes (if Fill mail won't set the name)",
 	"/mb bags  - which containers count as bags and bank, and the mats found in each",
-	"/mb guide  - show or hide the leveling guide (Alchemy, Leatherworking, Tailoring, Enchanting, Blacksmithing, Mining)",
+	"/mb guide  - show or hide the leveling guide (Alchemy, Leatherworking, Tailoring, Enchanting, Blacksmithing, Mining, Cooking, First Aid)",
 	"/mb guide auto  - turn the guide popping up on login on or off",
 	"/mb minimap  - hide or show the minimap button",
+	"/mb farm  - start or stop recording what you loot and what it sells for (greys at vendor price); /mb farm list for past sessions",
+	"/mb fish  - fishing tracker totals, this outing and lifetime (the box shows while a fishing pole is equipped); /mb fish box, /mb fish show, /mb fish reset",
 }
 
 SLASH_MATBROKER1 = "/mb"
@@ -290,6 +306,10 @@ SlashCmdList.MATBROKER = function(msg)
 		else
 			ns.ToggleGuide()
 		end
+	elseif cmd == "farm" then
+		ns.FarmCommand(rest)
+	elseif cmd == "fish" or cmd == "fishing" then
+		ns.FishCommand(rest)
 	elseif cmd == "minimap" then
 		ns.ToggleMinimapButton()
 	elseif cmd == "ids" then
